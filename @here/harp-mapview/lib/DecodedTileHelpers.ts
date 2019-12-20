@@ -118,6 +118,9 @@ export function createMaterial(
 
     if (isExtrudedPolygonTechnique(technique)) {
         material.flatShading = true;
+        if (technique.vertexColors === true) {
+            delete technique.color;
+        }
     }
 
     material.depthTest = isExtrudedPolygonTechnique(technique) && technique.depthTest !== false;
