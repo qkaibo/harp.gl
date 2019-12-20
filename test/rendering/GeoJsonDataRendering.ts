@@ -177,8 +177,9 @@ describe("MapView + OmvDataSource + GeoJsonDataProvider rendering test", functio
                 technique: "extruded-polygon",
                 attr: {
                     vertexColors: false,
-                    lineWidth: 1,
-                    lineColor: "#172023",
+                    color: "#00800080",
+                    lineWidth: 2,
+                    lineColor: "#f0f",
                     lineColorMix: 0.6
                 }
             }

@@ -58,7 +58,12 @@ export namespace ColorUtils {
     export function getHexFromRgba(r: number, g: number, b: number, a: number): number {
         assert(a >= 0 && a <= 1);
         const t = HEX_FULL_CHANNEL - Math.floor(a * HEX_FULL_CHANNEL);
-        return (t << SHIFT_TRANSPARENCY) ^ getHexFromRgb(r, g, b);
+        return (
+            (t << SHIFT_TRANSPARENCY) ^
+            ((r * HEX_FULL_CHANNEL) << SHIFT_RED) ^
+            ((g * HEX_FULL_CHANNEL) << SHIFT_GREEN) ^
+            ((b * HEX_FULL_CHANNEL) << SHIFT_BLUE)
+        );
     }
 
     /**
@@ -114,7 +119,7 @@ export namespace ColorUtils {
             g: ((hex >> SHIFT_GREEN) & HEX_FULL_CHANNEL) / HEX_FULL_CHANNEL,
             b: ((hex >> SHIFT_BLUE) & HEX_FULL_CHANNEL) / HEX_FULL_CHANNEL,
             a:
-                (HEX_FULL_CHANNEL - ((hex >> SHIFT_TRANSPARENCY) & HEX_FULL_CHANNEL)) /
+                (HEX_FULL_CHANNEL - extractUint8FromSigned(hex >> SHIFT_TRANSPARENCY)) /
                 HEX_FULL_CHANNEL
         };
     }
@@ -139,7 +144,10 @@ export namespace ColorUtils {
      */
     export function getAlphaFromHex(hex: number): number {
         assert((hex & ~HEX_TRGB_MASK) === 0, "Wrong hex format: #" + hex.toString(16));
-        return (hex >> SHIFT_TRANSPARENCY) / 255;
+        return (
+            (HEX_FULL_CHANNEL - extractUint8FromSigned(hex >> SHIFT_TRANSPARENCY)) /
+            HEX_FULL_CHANNEL
+        );
     }
 
     /**
@@ -152,5 +160,19 @@ export namespace ColorUtils {
     export function removeAlphaFromHex(hex: number): number {
         assert((hex & ~HEX_TRGB_MASK) === 0, "Wrong hex format: #" + hex.toString(16));
         return hex & HEX_RGB_MASK;
+    }
+
+    /**
+     * Extract unsigned byte from possibly signed value that resulted from shifting signed value.
+     *
+     * We're using last 8 bytes of uint32 which are converted to signed integer and thus last byte
+     * gains "sign" meaning and then, when shifted we have "signed byte".
+     *
+     * See https://developer.mozilla.org/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators
+     * @param x signed integer value in range -128 to 127
+     * @returns unsigned integer value in range 0 to 255
+     */
+    export function extractUint8FromSigned(x: number) {
+        return (x & 0x7f) + (x < 0 ? 128 : 0);
     }
 }

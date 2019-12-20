@@ -41,7 +41,7 @@ export class DebugTile extends Tile {
         color: new THREE.Color("#ff0000")
     });
 
-    private readonly m_textLayoutStyle: TextLayoutStyle;
+    private readonly m_textLayoutStyle?: TextLayoutStyle;
 
     constructor(dataSource: DataSource, tileKey: TileKey) {
         super(dataSource, tileKey);
@@ -76,47 +76,52 @@ export class DebugTile extends Tile {
 
         const textPosition = new THREE.Vector3();
 
-        if (this.projection.type === ProjectionType.Planar) {
-            // place the text position at north/west for planar projections.
-            textPosition.copy(this.geometry.vertices[3]);
-            textPosition.multiplyScalar(0.95);
+        const debugDataSource = this.dataSource as DebugTileDataSource;
+        if (debugDataSource.noText !== true) {
+            if (this.projection.type === ProjectionType.Planar) {
+                // place the text position at north/west for planar projections.
+                textPosition.copy(this.geometry.vertices[3]);
+                textPosition.multiplyScalar(0.95);
 
-            this.m_textLayoutStyle = new TextLayoutStyle({
-                verticalAlignment: VerticalAlignment.Below,
-                horizontalAlignment: HorizontalAlignment.Left
-            });
-        } else {
-            textPosition.copy(middlePoint);
+                this.m_textLayoutStyle = new TextLayoutStyle({
+                    verticalAlignment: VerticalAlignment.Below,
+                    horizontalAlignment: HorizontalAlignment.Left
+                });
+            } else {
+                textPosition.copy(middlePoint);
 
-            this.m_textLayoutStyle = new TextLayoutStyle({
-                verticalAlignment: VerticalAlignment.Center,
-                horizontalAlignment: HorizontalAlignment.Center
-            });
+                this.m_textLayoutStyle = new TextLayoutStyle({
+                    verticalAlignment: VerticalAlignment.Center,
+                    horizontalAlignment: HorizontalAlignment.Center
+                });
+            }
+
+            const text = `${tileKey.mortonCode()} (${tileKey.row}, ${tileKey.column}, ${
+                tileKey.level
+            })`;
+
+            textPosition.add(this.center);
+            const textElement = new TextElement(
+                text,
+                textPosition,
+                this.m_textRenderStyle,
+                this.m_textLayoutStyle,
+                PRIORITY_ALWAYS,
+                TEXT_SCALE
+            );
+            textElement.mayOverlap = true;
+            textElement.reserveSpace = false;
+            textElement.alwaysOnTop = true;
+            textElement.ignoreDistance = true;
+
+            this.addTextElement(textElement);
         }
-
-        const text = `${tileKey.mortonCode()} (${tileKey.row}, ${tileKey.column}, ${
-            tileKey.level
-        })`;
-
-        textPosition.add(this.center);
-        const textElement = new TextElement(
-            text,
-            textPosition,
-            this.m_textRenderStyle,
-            this.m_textLayoutStyle,
-            PRIORITY_ALWAYS,
-            TEXT_SCALE
-        );
-        textElement.mayOverlap = true;
-        textElement.reserveSpace = false;
-        textElement.alwaysOnTop = true;
-        textElement.ignoreDistance = true;
-
-        this.addTextElement(textElement);
     }
 }
 
 export class DebugTileDataSource extends DataSource {
+    noText: boolean = false;
+
     constructor(
         private m_tilingScheme: TilingScheme,
         name = "debug",
