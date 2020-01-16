@@ -222,6 +222,10 @@ void main() {
     alpha *= 1.0 - dashBlendFactor;
     #endif
 
+    if (alpha < 0.15) {
+        discard;
+    }
+
     #if USE_COLOR
     gl_FragColor = vec4( outputDiffuse * vColor, alpha );
     #else

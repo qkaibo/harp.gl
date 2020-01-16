@@ -1125,6 +1125,12 @@ export class TileGeometryCreator {
                 if (hasSolidLinesOutlines) {
                     const outlineTechnique = technique as SolidLineTechnique;
                     const outlineMaterial = material.clone() as SolidLineMaterial;
+
+                    outlineMaterial.stencilWrite = true;
+                    outlineMaterial.stencilRef = 1;
+                    outlineMaterial.stencilFunc = THREE.NotEqualStencilFunc;
+                    outlineMaterial.stencilZPass = THREE.ReplaceStencilOp;
+
                     const outlineColor = ColorCache.instance.getColor(
                         outlineTechnique.secondaryColor !== undefined
                             ? getPropertyValue(outlineTechnique.secondaryColor!, displayZoomLevel)
