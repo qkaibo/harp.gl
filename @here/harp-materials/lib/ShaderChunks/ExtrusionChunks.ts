@@ -23,6 +23,7 @@ varying float vExtrusionRatio;
 const float MIN_BUILDING_HEIGHT_SQUARED = ${MIN_BUILDING_HEIGHT_SQUARED};
 float extrusionAxisLenSquared = dot(extrusionAxis.xyz, extrusionAxis.xyz);
 vExtrusionRatio = max(1.0 - step(MIN_BUILDING_HEIGHT_SQUARED, extrusionAxisLenSquared), extrusionRatio);
+vExtrusionRatio = floor(vExtrusionRatio * 1024.0) / 1024.0;
 
 transformed = transformed + extrusionAxis.xyz * (vExtrusionRatio - 1.0);
 vExtrusionAxis = vec4(normalMatrix * extrusionAxis.xyz, extrusionAxis.w);
