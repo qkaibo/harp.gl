@@ -738,6 +738,35 @@ export namespace MapViewUtils {
     }
 
     /**
+     * Gets the tangent space rotation for given geo coordinates.
+     *
+     * Note: this method can be used to get rotation quaternion that aligns objects to the ground
+     * surface in certain position and for given projection type.
+     *
+     * @param projection The [[Projection]] used when converting from geo to world coordinates.
+     * @param location The reference point.
+     * @param rotation The optional output [[THREE.Quaternion]], if not supplied return object will
+     * be instantiated.
+     */
+    export function extractTangentRotationFromLocation(
+        projection: Projection,
+        location: GeoCoordinates,
+        rotation?: THREE.Quaternion
+    ): THREE.Quaternion {
+        // Build the matrix of the tangent space of the object in certain location.
+        projection.localTangentSpace(location, {
+            xAxis: tangentSpace.x,
+            yAxis: tangentSpace.y,
+            zAxis: tangentSpace.z,
+            position: cache.vector3[0]
+        });
+        cache.matrix4[0].makeBasis(tangentSpace.x, tangentSpace.y, tangentSpace.z);
+        const result = rotation !== undefined ? rotation : new THREE.Quaternion();
+        result.setFromRotationMatrix(cache.matrix4[0]);
+        return result;
+    }
+
+    /**
      * Get perspective camera frustum planes distances.
      * @return all plane distances in helper object.
      */
