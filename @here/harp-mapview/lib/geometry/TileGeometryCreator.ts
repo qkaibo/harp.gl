@@ -711,55 +711,56 @@ export class TileGeometryCreator {
                 }
 
                 if (isLineTechnique(technique) || isSegmentsTechnique(technique)) {
-                    const hasDynamicColor =
-                        Expr.isExpr(technique.color) || Expr.isExpr(technique.opacity);
                     const fadingParams = this.getFadingParams(displayZoomLevel, technique);
                     FadingFeature.addRenderHelper(
                         object,
                         viewRanges,
                         fadingParams.fadeNear,
-                        fadingParams.fadeFar,
-                        false,
-                        hasDynamicColor
-                            ? (renderer, mat) => {
-                                  const lineMaterial = mat as THREE.LineBasicMaterial;
-                                  applyBaseColorToMaterial(
-                                      lineMaterial,
-                                      lineMaterial.color,
-                                      technique,
-                                      technique.color,
-                                      mapView.zoomLevel
-                                  );
-                              }
-                            : undefined
+                        fadingParams.fadeFar
                     );
+
+                    if (Expr.isExpr(technique.color) || Expr.isExpr(technique.opacity)) {
+                        tile.addUpdater(() => {
+                            const lineMaterial = material as THREE.LineBasicMaterial;
+                            applyBaseColorToMaterial(
+                                lineMaterial,
+                                lineMaterial.color,
+                                technique,
+                                technique.color,
+                                mapView.zoomLevel
+                            );
+                        });
+                    }
                 }
 
                 if (isSolidLineTechnique(technique)) {
-                    const hasDynamicColor =
-                        Expr.isExpr(technique.color) || Expr.isExpr(technique.opacity);
+                    const lineMaterial = material as SolidLineMaterial;
+
                     const fadingParams = this.getFadingParams(displayZoomLevel, technique);
                     FadingFeature.addRenderHelper(
                         object,
                         viewRanges,
                         fadingParams.fadeNear,
-                        fadingParams.fadeFar,
-                        false,
-                        (renderer, mat) => {
-                            const lineMaterial = mat as SolidLineMaterial;
-                            const unitFactor =
-                                technique.metricUnit === "Pixel" ? mapView.pixelToWorld : 1.0;
+                        fadingParams.fadeFar
+                    );
 
-                            if (hasDynamicColor) {
-                                applyBaseColorToMaterial(
-                                    lineMaterial,
-                                    lineMaterial.color,
-                                    technique,
-                                    technique.color,
-                                    mapView.zoomLevel
-                                );
-                            }
+                    if (Expr.isExpr(technique.color) || Expr.isExpr(technique.opacity)) {
+                        tile.addUpdater(() => {
+                            applyBaseColorToMaterial(
+                                lineMaterial,
+                                lineMaterial.color,
+                                technique,
+                                technique.color,
+                                mapView.zoomLevel
+                            );
+                        });
+                    }
 
+                    const metricUnitIsPixel = technique.metricUnit === "Pixel";
+
+                    if (Expr.isExpr(technique.lineWidth) || metricUnitIsPixel) {
+                        tile.addUpdater(() => {
+                            const unitFactor = metricUnitIsPixel ? mapView.pixelToWorld : 1.0;
                             lineMaterial.lineWidth =
                                 getPropertyValue(
                                     technique.lineWidth,
@@ -768,47 +769,56 @@ export class TileGeometryCreator {
                                 ) *
                                 unitFactor *
                                 0.5;
+                        });
+                    }
 
-                            if (technique.outlineWidth !== undefined) {
-                                lineMaterial.outlineWidth =
-                                    getPropertyValue(
-                                        technique.outlineWidth,
-                                        mapView.zoomLevel,
-                                        mapView.pixelToWorld
-                                    ) * unitFactor;
-                            }
+                    if (Expr.isExpr(technique.outlineWidth) || metricUnitIsPixel) {
+                        tile.addUpdater(() => {
+                            const unitFactor = metricUnitIsPixel ? mapView.pixelToWorld : 1.0;
+                            lineMaterial.outlineWidth =
+                                getPropertyValue(
+                                    technique.outlineWidth,
+                                    mapView.zoomLevel,
+                                    mapView.pixelToWorld
+                                ) * unitFactor;
+                        });
+                    }
 
-                            if (technique.dashSize !== undefined) {
-                                lineMaterial.dashSize =
-                                    getPropertyValue(
-                                        technique.dashSize,
-                                        mapView.zoomLevel,
-                                        mapView.pixelToWorld
-                                    ) *
-                                    unitFactor *
-                                    0.5;
-                            }
+                    if (Expr.isExpr(technique.dashSize) || metricUnitIsPixel) {
+                        tile.addUpdater(() => {
+                            const unitFactor = metricUnitIsPixel ? mapView.pixelToWorld : 1.0;
 
-                            if (technique.gapSize !== undefined) {
-                                lineMaterial.gapSize =
-                                    getPropertyValue(
-                                        technique.gapSize,
-                                        mapView.zoomLevel,
-                                        mapView.pixelToWorld
-                                    ) *
-                                    unitFactor *
-                                    0.5;
-                            }
-                        }
-                    );
+                            lineMaterial.dashSize =
+                                getPropertyValue(
+                                    technique.dashSize,
+                                    mapView.zoomLevel,
+                                    mapView.pixelToWorld
+                                ) *
+                                unitFactor *
+                                0.5;
+                        });
+                    }
+
+                    if (Expr.isExpr(technique.gapSize) || metricUnitIsPixel) {
+                        tile.addUpdater(() => {
+                            const unitFactor = metricUnitIsPixel ? mapView.pixelToWorld : 1.0;
+
+                            lineMaterial.gapSize =
+                                getPropertyValue(
+                                    technique.gapSize,
+                                    mapView.zoomLevel,
+                                    mapView.pixelToWorld
+                                ) *
+                                unitFactor *
+                                0.5;
+                        });
+                    }
                 }
 
                 if (isExtrudedLineTechnique(technique)) {
-                    const hasDynamicColor =
-                        Expr.isExpr(technique.color) || Expr.isExpr(technique.opacity);
                     // extruded lines are normal meshes, and need transparency only when fading or
                     // dynamic properties is defined.
-                    if (technique.fadeFar !== undefined || hasDynamicColor) {
+                    if (technique.fadeFar !== undefined) {
                         const fadingParams = this.getFadingParams(
                             displayZoomLevel,
                             technique as StandardExtrudedLineTechnique
@@ -818,78 +828,66 @@ export class TileGeometryCreator {
                             object,
                             viewRanges,
                             fadingParams.fadeNear,
-                            fadingParams.fadeFar,
-                            true,
-                            hasDynamicColor
-                                ? (renderer, mat) => {
-                                      const extrudedMaterial = mat as
-                                          | MapMeshStandardMaterial
-                                          | MapMeshBasicMaterial;
-
-                                      applyBaseColorToMaterial(
-                                          extrudedMaterial,
-                                          extrudedMaterial.color,
-                                          technique,
-                                          technique.color!,
-                                          mapView.zoomLevel
-                                      );
-                                  }
-                                : undefined
+                            fadingParams.fadeFar
                         );
+                    }
+
+                    if (Expr.isExpr(technique.color) || Expr.isExpr(technique.opacity)) {
+                        tile.addUpdater(() => {
+                            const extrudedMaterial = material as
+                                | MapMeshStandardMaterial
+                                | MapMeshBasicMaterial;
+
+                            applyBaseColorToMaterial(
+                                extrudedMaterial,
+                                extrudedMaterial.color,
+                                technique,
+                                technique.color!,
+                                mapView.zoomLevel
+                            );
+                        });
                     }
                 }
 
                 this.addUserData(tile, srcGeometry, technique, object);
 
                 if (isExtrudedPolygonTechnique(technique) || isFillTechnique(technique)) {
-                    // filled polygons are normal meshes, and need transparency only when fading or
-                    // dynamic properties is defined.
-                    const hasDynamicPrimaryColor =
-                        Expr.isExpr(technique.color) || Expr.isExpr(technique.opacity);
-                    const hasDynamicSecondaryColor =
-                        isExtrudedPolygonTechnique(technique) && Expr.isExpr(technique.emissive);
-                    const hasDynamicColor = hasDynamicPrimaryColor || hasDynamicSecondaryColor;
-
-                    if (technique.fadeFar !== undefined || hasDynamicColor) {
+                    if (technique.fadeFar !== undefined) {
                         const fadingParams = this.getFadingParams(displayZoomLevel, technique);
                         FadingFeature.addRenderHelper(
                             object,
                             viewRanges,
                             fadingParams.fadeNear,
-                            fadingParams.fadeFar,
-                            true,
-                            hasDynamicColor
-                                ? (renderer, mat) => {
-                                      const polygonMaterial = mat as
-                                          | MapMeshBasicMaterial
-                                          | MapMeshStandardMaterial;
-
-                                      if (hasDynamicPrimaryColor) {
-                                          applyBaseColorToMaterial(
-                                              polygonMaterial,
-                                              polygonMaterial.color,
-                                              technique,
-                                              technique.color!,
-                                              mapView.zoomLevel
-                                          );
-                                      }
-
-                                      if (
-                                          hasDynamicSecondaryColor &&
-                                          // Just to omit compiler warnings
-                                          isExtrudedPolygonTechnique(technique)
-                                      ) {
-                                          const standardMat = mat as MapMeshStandardMaterial;
-
-                                          applySecondaryColorToMaterial(
-                                              standardMat.emissive,
-                                              technique.emissive!,
-                                              mapView.zoomLevel
-                                          );
-                                      }
-                                  }
-                                : undefined
+                            fadingParams.fadeFar
                         );
+                    }
+
+                    if (Expr.isExpr(technique.color) || Expr.isExpr(technique.opacity)) {
+                        tile.addUpdater(() => {
+                            const polygonMaterial = material as
+                                | MapMeshBasicMaterial
+                                | MapMeshStandardMaterial;
+
+                            applyBaseColorToMaterial(
+                                polygonMaterial,
+                                polygonMaterial.color,
+                                technique,
+                                technique.color!,
+                                mapView.zoomLevel
+                            );
+                        });
+                    }
+
+                    if (isExtrudedPolygonTechnique(technique) && Expr.isExpr(technique.emissive)) {
+                        tile.addUpdater(() => {
+                            const standardMat = material as MapMeshStandardMaterial;
+
+                            applySecondaryColorToMaterial(
+                                standardMat.emissive,
+                                technique.emissive!,
+                                mapView.zoomLevel
+                            );
+                        });
                     }
                 }
 
@@ -1007,21 +1005,19 @@ export class TileGeometryCreator {
                         edgeObj,
                         viewRanges,
                         fadingParams.lineFadeNear,
-                        fadingParams.lineFadeFar,
-                        false,
-                        extrudedPolygonTechnique.lineColor !== undefined &&
-                            Expr.isExpr(extrudedPolygonTechnique.lineColor)
-                            ? () => {
-                                  applyBaseColorToMaterial(
-                                      edgeMaterial,
-                                      edgeMaterial.color,
-                                      extrudedPolygonTechnique,
-                                      extrudedPolygonTechnique.lineColor!,
-                                      mapView.zoomLevel
-                                  );
-                              }
-                            : undefined
+                        fadingParams.lineFadeFar
                     );
+                    if (Expr.isExpr(technique.lineColor) || Expr.isExpr(technique.opacity)) {
+                        tile.addUpdater(() => {
+                            applyBaseColorToMaterial(
+                                edgeMaterial,
+                                edgeMaterial.color,
+                                extrudedPolygonTechnique,
+                                extrudedPolygonTechnique.lineColor!,
+                                mapView.zoomLevel
+                            );
+                        });
+                    }
 
                     if (extrusionAnimationEnabled) {
                         extrudedObjects.push({
@@ -1087,22 +1083,20 @@ export class TileGeometryCreator {
                         outlineObj,
                         viewRanges,
                         fadingParams.lineFadeNear,
-                        fadingParams.lineFadeFar,
-                        false,
-                        fillTechnique.lineColor !== undefined &&
-                            Expr.isExpr(fillTechnique.lineColor)
-                            ? (renderer, mat) => {
-                                  const edgeMaterial = mat as EdgeMaterial;
-                                  applyBaseColorToMaterial(
-                                      edgeMaterial,
-                                      edgeMaterial.color,
-                                      fillTechnique,
-                                      fillTechnique.lineColor!,
-                                      mapView.zoomLevel
-                                  );
-                              }
-                            : undefined
+                        fadingParams.lineFadeFar
                     );
+
+                    if (Expr.isExpr(technique.lineColor) || Expr.isExpr(technique.opacity)) {
+                        tile.addUpdater(() => {
+                            applyBaseColorToMaterial(
+                                outlineMaterial,
+                                outlineMaterial.color,
+                                fillTechnique,
+                                fillTechnique.lineColor!,
+                                mapView.zoomLevel
+                            );
+                        });
+                    }
 
                     this.registerTileObject(tile, outlineObj, technique.kind);
                     objects.push(outlineObj);
@@ -1137,51 +1131,61 @@ export class TileGeometryCreator {
                         outlineObj,
                         viewRanges,
                         fadingParams.fadeNear,
-                        fadingParams.fadeFar,
-                        false,
-                        (renderer, mat) => {
-                            const lineMaterial = mat as SolidLineMaterial;
-
-                            const unitFactor =
-                                outlineTechnique.metricUnit === "Pixel"
-                                    ? mapView.pixelToWorld
-                                    : 1.0;
-
-                            if (outlineTechnique.secondaryColor !== undefined) {
-                                applyBaseColorToMaterial(
-                                    lineMaterial,
-                                    lineMaterial.color,
-                                    outlineTechnique,
-                                    outlineTechnique.secondaryColor,
-                                    mapView.zoomLevel
-                                );
-                            }
-
-                            if (outlineTechnique.secondaryWidth !== undefined) {
-                                const techniqueLineWidth = getPropertyValue(
-                                    outlineTechnique.lineWidth!,
-                                    mapView.zoomLevel,
-                                    mapView.pixelToWorld
-                                );
-                                const techniqueSecondaryWidth = getPropertyValue(
-                                    outlineTechnique.secondaryWidth!,
-                                    mapView.zoomLevel,
-                                    mapView.pixelToWorld
-                                );
-                                const techniqueOpacity = getPropertyValue(
-                                    outlineTechnique.opacity,
-                                    mapView.zoomLevel
-                                );
-                                // hide outline when it's equal or smaller then line to avoid subpixel contour
-                                const lineWidth =
-                                    techniqueSecondaryWidth <= techniqueLineWidth &&
-                                    (techniqueOpacity === undefined || techniqueOpacity === 1)
-                                        ? 0
-                                        : techniqueSecondaryWidth;
-                                lineMaterial.lineWidth = lineWidth * unitFactor * 0.5;
-                            }
-                        }
+                        fadingParams.fadeFar
                     );
+
+                    if (
+                        (outlineTechnique.secondaryColor &&
+                            Expr.isExpr(outlineTechnique.secondaryColor)) ||
+                        Expr.isExpr(outlineTechnique.opacity)
+                    ) {
+                        tile.addUpdater(() => {
+                            const lineMaterial = material as SolidLineMaterial;
+                            applyBaseColorToMaterial(
+                                lineMaterial,
+                                lineMaterial.color,
+                                outlineTechnique,
+                                outlineTechnique.secondaryColor!,
+                                mapView.zoomLevel
+                            );
+                        });
+                    }
+
+                    const metricUnitIsPixel = outlineTechnique.metricUnit === "Pixel";
+
+                    if (
+                        Expr.isExpr(outlineTechnique.secondaryWidth) ||
+                        Expr.isExpr(outlineTechnique.secondaryColor) ||
+                        Expr.isExpr(outlineTechnique.opacity) ||
+                        metricUnitIsPixel
+                    ) {
+                        tile.addUpdater(() => {
+                            const lineMaterial = material as SolidLineMaterial;
+                            // NOTE! we assume that _effective_ opacity was calculated by previous
+                            // updater!
+                            const opacity = lineMaterial.opacity;
+
+                            const unitFactor = metricUnitIsPixel ? mapView.pixelToWorld : 1.0;
+
+                            const techniqueLineWidth = getPropertyValue(
+                                outlineTechnique.lineWidth!,
+                                mapView.zoomLevel,
+                                mapView.pixelToWorld
+                            );
+                            const techniqueSecondaryWidth = getPropertyValue(
+                                outlineTechnique.secondaryWidth!,
+                                mapView.zoomLevel,
+                                mapView.pixelToWorld
+                            );
+
+                            const lineWidth =
+                                techniqueSecondaryWidth <= techniqueLineWidth &&
+                                (opacity === undefined || opacity === 1)
+                                    ? 0
+                                    : techniqueSecondaryWidth;
+                            lineMaterial.lineWidth = lineWidth * unitFactor * 0.5;
+                        });
+                    }
 
                     this.registerTileObject(tile, outlineObj, technique.kind);
                     objects.push(outlineObj);

@@ -466,6 +466,10 @@ export class TextElement {
         this.m_layoutStyle = style;
     }
 
+    get reallyVisible() {
+        return this.visible && this.renderParams.opacity! > 0;
+    }
+
     hasFeatureId(): boolean {
         return this.featureId !== undefined && this.featureId !== 0;
     }

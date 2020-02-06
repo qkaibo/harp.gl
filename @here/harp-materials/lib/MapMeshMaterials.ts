@@ -536,22 +536,27 @@ export namespace FadingFeature {
      * actual camera setup.
      * @param fadeNear The fadeNear value to set in the material.
      * @param fadeFar The fadeFar value to set in the material.
-     * @param updateUniforms If `true`, the fading uniforms are set. Not required if material is
-     *          handling the uniforms already, like in a [[THREE.ShaderMaterial]].
-     * @param additionalCallback If defined, this function will be called before the function will
-     *          return.
      */
     export function addRenderHelper(
         object: THREE.Object3D,
         viewRanges: ViewRanges,
         fadeNear: number | undefined,
-        fadeFar: number | undefined,
-        updateUniforms: boolean,
-        additionalCallback?: (
-            renderer: THREE.WebGLRenderer,
-            material: THREE.Material & FadingFeature
-        ) => void
+        fadeFar: number | undefined
     ) {
+        if ("material" in object) {
+            const material = ((object as any).material as unknown) as FadingFeature;
+
+            if (
+                (fadeNear === undefined || fadeNear === FadingFeature.DEFAULT_FADE_NEAR) &&
+                (fadeFar === undefined || fadeFar === FadingFeature.DEFAULT_FADE_FAR)
+            ) {
+                // Don't install any callbacks if fading is disabled for this feature
+                material.fadeNear = DEFAULT_FADE_NEAR;
+                material.fadeFar = DEFAULT_FADE_FAR;
+                return;
+            }
+        }
+
         // tslint:disable-next-line:no-unused-variable
         object.onBeforeRender = chainCallbacks(
             object.onBeforeRender,
@@ -574,10 +579,6 @@ export namespace FadingFeature {
                     fadeFar === undefined || fadeFar === FadingFeature.DEFAULT_FADE_FAR
                         ? FadingFeature.DEFAULT_FADE_FAR
                         : cameraToWorldDistance(fadeFar, viewRanges);
-
-                if (additionalCallback !== undefined) {
-                    additionalCallback(renderer, material);
-                }
             }
         );
     }
