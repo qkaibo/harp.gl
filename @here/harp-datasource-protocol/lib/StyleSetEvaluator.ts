@@ -5,7 +5,6 @@
  */
 
 import { LoggerManager } from "@here/harp-utils";
-
 import {
     BooleanLiteralExpr,
     CallExpr,
@@ -26,7 +25,7 @@ import {
     Value,
     VarExpr
 } from "./Expr";
-import { ExprPool } from "./ExprPool";
+import { ExprPool, PooledExpr } from "./ExprPool";
 import { isInterpolatedPropertyDefinition } from "./InterpolatedProperty";
 import { interpolatedPropertyDefinitionToJsonExpr } from "./InterpolatedPropertyDefs";
 import { AttrScope, mergeTechniqueDescriptor } from "./TechniqueDescriptor";
@@ -81,6 +80,10 @@ interface StyleInternalParams {
      *  - expressions [[TechniqueDescriptor.dynamicPropNames]] (Future)
      */
     _dynamicForwardedAttributes?: Array<[string, Expr]>;
+
+    /**
+     * Map of indexed by keys returned by [[getDynamicTechniqueKeys]].
+     */
     _dynamicTechniques?: Map<string, IndexedTechnique>;
 
     /**
@@ -361,7 +364,6 @@ export class StyleSetEvaluator {
                 break;
             }
         }
-
         return result;
     }
 
@@ -643,21 +645,23 @@ export class StyleSetEvaluator {
         let technique: IndexedTechnique | undefined;
         if (style._dynamicTechniques !== undefined) {
             const dynamicAttributes = this.evaluateTechniqueProperties(style, env);
-            const key = this.getDynamicTechniqueKey(style, dynamicAttributes);
+            const [staticKey, volatileKey] = this.getDynamicTechniqueKeys(style, dynamicAttributes);
+            const key = staticKey + volatileKey;
             technique = style._dynamicTechniques!.get(key);
             if (technique === undefined) {
-                technique = this.createTechnique(style, key, dynamicAttributes);
+                technique = this.createTechnique(style, dynamicAttributes);
                 style._dynamicTechniques!.set(key, technique);
+                technique._staticKey = staticKey;
             }
         } else {
             technique = style._staticTechnique;
             if (technique === undefined) {
                 style._staticTechnique = technique = this.createTechnique(
                     style,
-                    `${style._styleSetIndex}`,
                     []
                 ) as IndexedTechnique;
             }
+            technique._staticKey = "";
         }
 
         if (technique._index === undefined) {
@@ -667,20 +671,21 @@ export class StyleSetEvaluator {
         return technique;
     }
 
-    private getDynamicTechniqueKey(
+    private getDynamicTechniqueKeys(
         style: InternalStyle,
-        dynamicAttributes: Array<[string, Value]>
+        dynamicAttributes: Array<[string, Value | PooledExpr]>
     ) {
-        const dynamicAttrKey = dynamicAttributes
-            .map(([_attrName, attrValue]) => {
-                if (attrValue === undefined) {
-                    return "U";
-                } else {
-                    return JSON.stringify(attrValue);
-                }
-            })
-            .join(":");
-        return `${style._styleSetIndex!}:${dynamicAttrKey}`;
+        let staticKey: string = "";
+        let volatileKey: string = "";
+        for (const entry of dynamicAttributes) {
+            const value = entry[1];
+            if (Expr.isExpr(value)) {
+                volatileKey += ":" + ((value as unknown) as PooledExpr)._key;
+            } else {
+                staticKey += ":" + value;
+            }
+        }
+        return [staticKey, volatileKey];
     }
 
     private checkStyleDynamicAttributes(style: InternalStyle) {
@@ -786,7 +791,10 @@ export class StyleSetEvaluator {
         }
     }
 
-    private evaluateTechniqueProperties(style: InternalStyle, env: Env): Array<[string, Value]> {
+    private evaluateTechniqueProperties(
+        style: InternalStyle,
+        env: Env
+    ): Array<[string, Value | PooledExpr]> {
         if (style._dynamicTechniqueAttributes === undefined) {
             return [];
         }
@@ -796,7 +804,9 @@ export class StyleSetEvaluator {
         return style._dynamicTechniqueAttributes.map(([attrName, attrExpr]) => {
             try {
                 if (attrExpr.isDynamic()) {
-                    const reducedExpr = attrExpr.instantiate(instantiationContext);
+                    const reducedExpr = this.m_exprPool.add(
+                        attrExpr.instantiate(instantiationContext)
+                    );
                     return [attrName, reducedExpr];
                 }
 
@@ -813,11 +823,7 @@ export class StyleSetEvaluator {
         });
     }
 
-    private createTechnique(
-        style: InternalStyle,
-        key: string,
-        dynamicAttrs: Array<[string, Value]>
-    ) {
+    private createTechnique(style: InternalStyle, dynamicAttrs: Array<[string, Value]>) {
         const technique: any = {};
         technique.name = style.technique;
         if (style._staticAttributes !== undefined) {
@@ -852,7 +858,7 @@ export class StyleSetEvaluator {
 
         technique._index = this.m_techniques.length;
         technique._styleSetIndex = style._styleSetIndex!;
-        technique._key = key;
+
         if (style.styleSet !== undefined) {
             technique._styleSet = style.styleSet;
         }

@@ -56,10 +56,12 @@ import { ContextualArabicConverter } from "@here/harp-text-canvas";
 import { assert, LoggerManager } from "@here/harp-utils";
 import * as THREE from "three";
 
+import { ExprPool } from "@here/harp-datasource-protocol/lib/ExprPool";
 import { AnimatedExtrusionTileHandler } from "../AnimatedExtrusionHandler";
 import {
     applyBaseColorToMaterial,
     applySecondaryColorToMaterial,
+    assignTechniqueKeys,
     compileTechniques,
     createMaterial,
     getBufferAttribute,
@@ -115,6 +117,17 @@ export class TileGeometryCreator {
     static get instance(): TileGeometryCreator {
         return this.m_instance || (this.m_instance = new TileGeometryCreator());
     }
+
+    /**
+     * TODO: This should be somewhere else.
+     *
+     * Lifetime of this cache should be same as lifetime of one "Theme".
+     *
+     * So, baasically the same as `TextStyleCache` lifetime, which is broken too!
+     *
+     * MapView theme reset, should reset this.
+     */
+    private exprPool = new ExprPool();
 
     /**
      *  Creates an instance of TileGeometryCreator. Access is allowed only through `instance`.
@@ -176,6 +189,7 @@ export class TileGeometryCreator {
 
         // compile the dynamic expressions.
         compileTechniques(decodedTile.techniques);
+        assignTechniqueKeys(decodedTile.techniques, this.exprPool);
     }
 
     /**

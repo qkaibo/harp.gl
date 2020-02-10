@@ -28,6 +28,7 @@ import {
     TRANSPARENCY_PROPERTY_KEYS,
     Value
 } from "@here/harp-datasource-protocol";
+import { ExprPool } from "@here/harp-datasource-protocol/lib/ExprPool";
 import {
     CirclePointsMaterial,
     disableBlending,
@@ -720,6 +721,30 @@ export function compileTechniques(techniques: Technique[]) {
                 }
             }
         }
+    });
+}
+
+/**
+ * Compile expressions in techniques as they were received from decoder.
+ */
+export function assignTechniqueKeys(techniques: Technique[], pool: ExprPool) {
+    techniques.forEach((technique: any) => {
+        let volatileKeyPart: string = "";
+        for (const propertyName in technique) {
+            if (!technique.hasOwnProperty(propertyName)) {
+                continue;
+            }
+            const value = (technique as any)[propertyName];
+            if (Expr.isExpr(value)) {
+                const interned = pool.add(value);
+                if (value !== interned) {
+                    (technique as any)[propertyName] = interned;
+                }
+                volatileKeyPart += ":" + interned._key;
+            }
+        }
+
+        technique._key = `${technique._styleSetIndex}${technique._staticKey}${volatileKeyPart}`;
     });
 }
 

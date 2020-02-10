@@ -21,6 +21,24 @@ import {
 } from "./Expr";
 
 /**
+ * @hidden
+ *
+ * `Expr` with `_key`.
+ *
+ * `PooledExpr` are created by `ExprPool`.
+ */
+export interface PooledExpr extends Expr {
+    /**
+     * @hidden
+     *
+     * Unique key identifying this [[Expr]] instance within one [[ExprPool]].
+     *
+     * @see [[ExprPool.add]].
+     */
+    _key: number;
+}
+
+/**
  * [[ExprPool]] maintains a set of unique interned [[Expr]] objects.
  *
  * @hidden
@@ -37,15 +55,20 @@ export class ExprPool implements ExprVisitor<Expr, void> {
     private readonly m_caseExprs: CaseExpr[] = [];
     private readonly m_callExprs = new Map<string, CallExpr[]>();
 
+    private nextKey: number = 1;
     /**
      * Add `expr` to this [[ExprPool]] and return a unique [[Expr]]
      * object that is structurally equivalent to `expr`.
      *
      * @param expr The [[Expr]] to add to this [[ExprPool]].
-     * @returns A unique [[Expr]] that is structurally equivalent to `expr`.
+     * @returns A unique [[PooledExpr]] that is structurally equivalent to `expr`.
      */
-    add(expr: Expr): Expr {
-        return expr.accept(this, undefined);
+    add(expr: Expr): PooledExpr {
+        const r: Partial<PooledExpr> = expr.accept(this, undefined);
+        if (r._key === undefined) {
+            r._key = this.nextKey++;
+        }
+        return r as PooledExpr;
     }
 
     visitNullLiteralExpr(expr: NullLiteralExpr, context: void): Expr {

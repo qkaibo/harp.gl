@@ -524,9 +524,17 @@ export interface IndexedTechniqueParams {
     /**
      * Unique technique key derived from all dynamic expressions that were input to this particular
      * technique instance.
+     *
+     * Note, it's not stable across runtimes. It should be clered when technique is transferred.
      * @hidden
      */
-    _key: string;
+    _key?: string;
+
+    /**
+     * Part of `_key` that is calculated from simple values and thus is stable across runtimes.
+     * @hidden
+     */
+    _staticKey?: string;
 
     /**
      * Optimization: Unique [[Technique]] index of [[Style]] from which technique was derived.
