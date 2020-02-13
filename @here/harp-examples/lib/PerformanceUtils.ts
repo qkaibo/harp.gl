@@ -70,7 +70,7 @@ export namespace PerformanceUtils {
     ];
 
     const DEFAULT_THEME = {
-        resource: "resources/berlin_tilezen_base.json"
+        resource: "resources/normal.day.json"
     };
 
     function getVendorFomContext(context: WebGLRenderingContext): GlInfo {
@@ -197,7 +197,7 @@ export namespace PerformanceUtils {
                     dataSource = new OmvDataSource({
                         baseUrl: "https://xyz.api.here.com/tiles/herebase.02",
                         apiFormat: APIFormat.XYZOMV,
-                        styleSetName: "tilezen",
+                        styleSetName: "here_olp",
                         maxZoomLevel: 17,
                         authenticationCode: accessToken,
                         copyrightInfo: copyrights

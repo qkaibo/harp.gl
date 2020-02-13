@@ -549,6 +549,22 @@ export namespace PerformanceBenchmark {
         finishTest();
     }
 
+    async function ZoomInBerlin() {
+        startTest("ZoomIn", "Berlin");
+        latestResult = await PerformanceUtils.measureFlyoverSpline(
+            mapViewApp,
+            "ZoomIn_Berlin",
+            PerformanceTestData.BERLIN_ZOOM_IN,
+            flyoverNumFrames,
+            false,
+            true,
+            showLabels,
+            flyoverNumRuns,
+            checkIfCancelled
+        );
+        finishTest();
+    }
+
     async function ZoomInOutParis() {
         startTest("ZoomInOut", "Paris");
         latestResult = await PerformanceUtils.measureFlyoverSpline(
@@ -591,7 +607,8 @@ export namespace PerformanceBenchmark {
                 reducedDay: "resources/berlin_tilezen_day_reduced.json",
                 reducedNight: "resources/berlin_tilezen_night_reduced.json",
                 streets: "resources/berlin_tilezen_effects_streets.json",
-                outlines: "resources/berlin_tilezen_effects_outlines.json"
+                outlines: "resources/berlin_tilezen_effects_outlines.json",
+                miami: "resources/normal.day.json"
             },
             PixelRatio: {
                 default: undefined,
@@ -601,6 +618,7 @@ export namespace PerformanceBenchmark {
             },
             CanvasSize: {
                 default: undefined,
+                "1100×900": "1100×900",
                 "640×400": "640×400",
                 "1024×768": "1024×768",
                 "1024×1024": "1024×1024",
@@ -660,7 +678,7 @@ export namespace PerformanceBenchmark {
                 "6": 6,
                 "8": 8
             },
-            PhasedLoading: true,
+            PhasedLoading: false,
             Berlin: () => {
                 openMapBerlin();
             },
@@ -712,6 +730,9 @@ export namespace PerformanceBenchmark {
             FlyOverEuropeLoaded: () => {
                 flyoverEuropeLoaded();
             },
+            ZoomInBerlin: () => {
+                ZoomInBerlin();
+            },
             ZoomInOutParis: () => {
                 ZoomInOutParis();
             },
@@ -737,7 +758,7 @@ export namespace PerformanceBenchmark {
                     mapViewApp.mapView.theme = newTheme;
                 });
             })
-            .setValue("resources/berlin_tilezen_base.json");
+            .setValue("resources/normal.day.json");
 
         benchmarksFolder
             .add(guiOptions, "CanvasSize", guiOptions.CanvasSize)
@@ -765,7 +786,7 @@ export namespace PerformanceBenchmark {
                 }
                 canvasSize = `${theCanvasElement.clientWidth}×${theCanvasElement.clientHeight}`;
             })
-            .setValue(undefined);
+            .setValue("1100×900");
 
         benchmarksFolder
             .add(guiOptions, "PowerPreference", guiOptions.PowerPreference)
@@ -863,6 +884,7 @@ export namespace PerformanceBenchmark {
             })
             .setValue(undefined);
 
+        flyOversFolder.add(guiOptions, "ZoomInBerlin");
         flyOversFolder.add(guiOptions, "ZoomInOutParis");
         flyOversFolder.add(guiOptions, "ZoomInOutParis2");
         flyOversFolder.add(guiOptions, "FlyOverNY");
