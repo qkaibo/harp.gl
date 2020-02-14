@@ -364,7 +364,7 @@ export class Tile implements CachedResource {
 
     // Used for [[TextElement]]s that are stored in the data, and that are placed explicitly,
     // fading in and out.
-    private readonly m_textElementGroups = new TextElementGroupPriorityList();
+    private m_textElementGroups = new TextElementGroupPriorityList();
 
     // Blocks other labels from showing.
     private readonly m_pathBlockingElements: PathBlockingElement[] = [];
@@ -545,7 +545,12 @@ export class Tile implements CachedResource {
      * @param textElement The TextElement to add.
      */
     addTextElement(textElement: TextElement) {
-        this.textElementGroups.add(textElement);
+        const groups = this.textElementGroups;
+
+        if (this.m_textElementsChanged === false) {
+            this.m_textElementGroups = groups.clone();
+        }
+        groups.add(textElement);
         this.textElementsChanged = true;
     }
 
@@ -567,11 +572,15 @@ export class Tile implements CachedResource {
      * @returns `true` if the TextElement has been removed successfully; `false` otherwise.
      */
     removeTextElement(textElement: TextElement): boolean {
-        if (this.textElementGroups.remove(textElement)) {
-            this.textElementsChanged = true;
-            return true;
+        const groups = this.textElementGroups;
+        if (!groups.remove(textElement)) {
+            return false;
         }
-        return false;
+        if (this.m_textElementsChanged === false) {
+            this.m_textElementGroups = groups.clone();
+        }
+        this.textElementsChanged = true;
+        return true;
     }
 
     /**

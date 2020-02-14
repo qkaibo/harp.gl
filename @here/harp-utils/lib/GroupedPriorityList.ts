@@ -32,6 +32,15 @@ export class PriorityListGroup<T extends PriorityListElement> {
     clone(): PriorityListGroup<T> {
         return new PriorityListGroup<T>(this.priority, this.elements.slice());
     }
+
+    remove(element: T): boolean {
+        const foundIndex = this.elements.indexOf(element);
+        if (foundIndex === -1) {
+            return false;
+        }
+        this.elements.splice(foundIndex, 1);
+        return true;
+    }
 }
 
 /**
@@ -65,20 +74,16 @@ export class GroupedPriorityList<T extends PriorityListElement> {
      * @returns `True` if the element was removed, `false` otherwise.
      */
     remove(element: T): boolean {
-        const group = this.getGroup(element.priority);
-        if (group !== undefined) {
-            const foundIndex = group.elements.indexOf(element);
-            if (foundIndex >= 0) {
-                group.elements.splice(foundIndex, 1);
-                if (group.elements.length === 0) {
-                    const normalizedPriority = Math.floor(element.priority);
-                    this.groups.delete(normalizedPriority);
-                    if (this.m_sortedGroups) {
-                        this.m_sortedGroups = [];
-                    }
+        const group = this.findGroup(element.priority);
+        if (group !== undefined && group.remove(element)) {
+            if (group.elements.length === 0) {
+                this.groups.delete(group.priority);
+                if (this.m_sortedGroups) {
+                    this.m_sortedGroups = [];
                 }
-                return true;
             }
+
+            return true;
         }
         return false;
     }
@@ -111,6 +116,14 @@ export class GroupedPriorityList<T extends PriorityListElement> {
             group.elements = group.elements.concat(otherGroup[1].elements);
         }
         return this;
+    }
+
+    clone(): GroupedPriorityList<T> {
+        const clone = new GroupedPriorityList<T>();
+        for (const [priority, group] of this.groups) {
+            clone.groups.set(priority, group.clone());
+        }
+        return clone;
     }
 
     /**
@@ -178,7 +191,7 @@ export class GroupedPriorityList<T extends PriorityListElement> {
         if (group === undefined) {
             const normalizedPriority = Math.floor(priority);
             group = new PriorityListGroup<T>(normalizedPriority);
-            this.groups.set(normalizedPriority, group);
+            this.groups.set(group.priority, group);
             if (this.m_sortedGroups) {
                 this.m_sortedGroups = [];
             }
