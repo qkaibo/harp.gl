@@ -765,6 +765,12 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                                 new THREE.Vector2(0, extents)
                             ];
                         }
+
+                        // if needed close the ring before clipping the geometries.
+                        if (!coords[0].equals(coords[coords.length - 1])) {
+                            coords.push(coords[0].clone());
+                        }
+
                         coords = clipPolygon(coords, clipRing);
                     }
 
