@@ -18,22 +18,32 @@ import { UrlCopyrightProvider } from "../lib/copyrights/UrlCopyrightProvider";
 
 describe("CopyrightProviders", function() {
     describe("#UrlCopyrightProvider", function() {
+        function getCopyrightProvider() {
+            return new UrlCopyrightProvider("", "normal");
+        }
         async function getCopyrights(geoBox: GeoBox, level: number): Promise<CopyrightInfo[]> {
-            const provider = new UrlCopyrightProvider("", "normal");
+            const provider = getCopyrightProvider();
             return provider.getCopyrights(geoBox, level);
         }
 
         describe("#init", function() {
+            // tslint:disable: no-unused-expression
             it("Should return default copyrights if failed to load data", async function() {
-                const fakeJson = sinon.fake.rejects(new Error("error"));
+                const jsonerror = "jsonerror";
+                const fakeJson = sinon.fake.rejects(new Error(jsonerror));
 
                 sinon.replace(TransferManager.prototype, "downloadJson", fakeJson);
-                const copyrights = await getCopyrights(
+                const copyrightProvider = getCopyrightProvider();
+                const errorSpy = sinon.spy();
+                // We need this to access the protected member.
+                // tslint:disable-next-line: no-string-literal
+                copyrightProvider["logger"].error = errorSpy;
+                const copyrights = await copyrightProvider.getCopyrights(
                     new GeoBox(new GeoCoordinates(2, 2), new GeoCoordinates(3, 3)),
                     10
                 );
+                expect(errorSpy.called).true;
                 sinon.restore();
-
                 expect(copyrights).to.deep.equal([]);
             });
 
@@ -41,12 +51,17 @@ describe("CopyrightProviders", function() {
                 const fakeJson = sinon.fake.rejects(new Error("error"));
                 sinon.replace(TransferManager.prototype, "downloadJson", fakeJson);
 
-                const provider = new UrlCopyrightProvider("", "normal");
+                const provider = getCopyrightProvider();
+                const errorSpy = sinon.spy();
+                // We need this to access the protected member.
+                // tslint:disable-next-line: no-string-literal
+                provider["logger"].error = errorSpy;
                 const geoBox = new GeoBox(new GeoCoordinates(2, 2), new GeoCoordinates(3, 3));
                 const firstResult = await provider.getCopyrights(geoBox, 10);
                 const secondResult = await provider.getCopyrights(geoBox, 5);
 
                 expect(firstResult).not.to.equal(secondResult);
+                expect(errorSpy.called).true;
 
                 sinon.restore();
             });
