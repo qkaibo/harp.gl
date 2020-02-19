@@ -17,8 +17,6 @@ import { LoggerManager } from "@here/harp-utils";
 
 import { DataProvider } from "./DataProvider";
 
-const logger = LoggerManager.instance.create("TileLoader");
-
 /**
  * The [[TileLoader]] manages the different states of loading and decoding for a [[Tile]]. Used by
  * the [[TileDataSource]].
@@ -68,6 +66,11 @@ export class TileLoader {
      * The internal function that is called when loading and decoding failed.
      */
     protected rejectedDonePromise?: (state: TileLoaderState) => void;
+
+    /**
+     * Logger to write to console etc.
+     */
+    protected logger = LoggerManager.instance.create("TileLoader");
 
     /**
      * Set up loading of a single [[Tile]].
@@ -230,7 +233,7 @@ export class TileLoader {
     protected startDecodeTile() {
         const payload = this.payload;
         if (payload === undefined) {
-            logger.error("TileLoader#startDecodeTile: Cannot decode without payload");
+            this.logger.error("TileLoader#startDecodeTile: Cannot decode without payload");
             return;
         }
 
@@ -314,7 +317,7 @@ export class TileLoader {
             return;
         }
         const dataSource = this.dataSource;
-        logger.error(
+        this.logger.error(
             `[${dataSource.name}]: failed to load tile ${this.tileKey.mortonCode()}`,
             error
         );
@@ -336,7 +339,7 @@ export class TileInfoLoader extends TileLoader {
     protected startDecodeTile() {
         const payload = this.payload;
         if (payload === undefined) {
-            logger.error("TileInfoLoader#startDecodeTile: Cannot decode without payload");
+            this.logger.error("TileInfoLoader#startDecodeTile: Cannot decode without payload");
             return;
         }
 
